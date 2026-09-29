@@ -4,7 +4,9 @@ Lightweight system tray battery indicator for the Scyrox V6 wireless mouse on KD
 
 ## Features
 
-- Real-time battery monitoring via reverse-engineered HID protocol
+- Battery monitoring via the reverse-engineered HID protocol
+- Works over the 2.4 GHz dongle (`f5f7`) and over the USB cable (`f5f6`),
+  with a shorter poll interval while wired
 - Color-coded system tray icon (green/yellow/red)
 - Charging indicator with lightning bolt
 - Voltage-to-percentage conversion using Scyrox S-Center curve
@@ -36,6 +38,29 @@ cmake --build build
 sudo cmake --build build --target install
 cp scyrox-v6.desktop ~/.config/autostart/
 ```
+
+## Device permissions
+
+`/dev/hidraw*` is created `0600 root:root`, so without a udev rule the app
+cannot talk to the mouse: the tray stays at "Not connected" and the log
+repeats `cannot open ... Erişim engellendi` (Permission denied). This happens
+whenever the device nodes are recreated — notably when the mouse is plugged in
+via USB cable, because the wired interface has its own PID.
+
+Install the bundled rule (covers both PIDs):
+
+```bash
+sudo install -m644 config/99-scyrox.rules /etc/udev/rules.d/99-scyrox.rules
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=hidraw
+```
+
+`sudo cmake --build build --target install` also places it in
+`/usr/local/lib/udev/rules.d/`. If `/etc/udev/rules.d/99-scyrox.rules` already
+exists it wins and shadows that copy, so replace it as shown above rather than
+keeping two versions.
+
+Only the install step needs root; the application itself runs as your user.
 
 ## Protocol
 

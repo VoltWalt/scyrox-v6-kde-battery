@@ -33,3 +33,7 @@ target_link_libraries(scyrox-v6 PRIVATE
 
 install(TARGETS scyrox-v6 DESTINATION bin)
 install(FILES scyrox-v6.desktop DESTINATION share/applications)
+# /dev/hidraw is 0600 root:root by default; without this rule the app gets
+# EACCES. Note /etc/udev/rules.d wins over this path if it holds a copy of
+# the same file.
+install(FILES config/99-scyrox.rules DESTINATION lib/udev/rules.d)

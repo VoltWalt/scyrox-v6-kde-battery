@@ -21,7 +21,7 @@ private slots:
     void onQuit();
 
 private:
-    void resetPresentation();
+    void resetPresentation(const QString &error = QString());
     void updateTooltip(const ScyroxData &data);
     void updateIcon(const ScyroxData &data);
     void checkNotifications(const ScyroxData &data);

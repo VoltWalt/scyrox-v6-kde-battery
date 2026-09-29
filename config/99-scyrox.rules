@@ -1,0 +1,15 @@
+# Scyrox V6 — battery indicator needs read/write access to /dev/hidraw*.
+#
+# Without this the nodes are created 0600 root:root and the app fails with
+# EACCES ("cannot open ... Permission denied"), so the tray icon stays at
+# "not connected".
+#
+#   f5f7 = wireless 8K dongle
+#   f5f6 = wired (USB cable)   <-- added: plugging the cable in creates
+#                                  fresh nodes that no rule covered
+#
+# Both are listed explicitly so the intent is obvious; a single vendor-wide
+# match on ATTRS{idVendor}=="3554" would work equally well.
+
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3554", ATTRS{idProduct}=="f5f7", MODE="0666"
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3554", ATTRS{idProduct}=="f5f6", MODE="0666"

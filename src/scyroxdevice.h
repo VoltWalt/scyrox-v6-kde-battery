@@ -17,6 +17,7 @@ struct ScyroxData {
     bool cached = false;     // true while showing state.json instead of live data
     QString mode;            // "wired" or "wireless"
     QString address;         // device address from the DeviceOnline response
+    QString error;           // why the device could not be opened, empty if fine
     qint64 lastUpdate = 0;   // timestamp of the last successful read
 
     // lastUpdate is deliberately excluded: it changes on every poll and would
@@ -26,7 +27,7 @@ struct ScyroxData {
         return rawLevel == o.rawLevel && displayLevel == o.displayLevel
             && charging == o.charging && voltageMv == o.voltageMv
             && connected == o.connected && cached == o.cached
-            && mode == o.mode && address == o.address;
+            && mode == o.mode && address == o.address && error == o.error;
     }
     bool operator!=(const ScyroxData &o) const { return !(*this == o); }
 };
@@ -118,6 +119,10 @@ private:
     QString m_intervalMode;       // mode the programmed interval was derived from
     quint64 m_stateSignature = 0; // content signature of the last state.json write
     bool m_stateSignatureValid = false;
+
+    // Last open() failure text. Backoff retries the open every 15 s, so the
+    // message is printed once per distinct reason instead of being repeated.
+    QString m_lastOpenError;
 
     // Protocol constants
     static constexpr int VENDOR_ID = 0x3554;

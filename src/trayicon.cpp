@@ -39,7 +39,9 @@ void TrayIcon::onDataChanged(const ScyroxData &data)
     if (!data.connected) {
         // The device layer also emits the stale payload alongside the
         // disconnect; rendering it here would undo the "not connected" icon.
-        resetPresentation();
+        // data.error explains *why* nothing is reachable — without it a
+        // permission problem is invisible when the app starts from autostart.
+        resetPresentation(data.error);
         return;
     }
 
@@ -56,11 +58,14 @@ void TrayIcon::onConnectionChanged(bool connected)
     // repaints because updateIcon() sees m_lastConnected == false.
 }
 
-void TrayIcon::resetPresentation()
+void TrayIcon::resetPresentation(const QString &error)
 {
-    m_lastTooltip.clear();
     setIcon(BatteryIcon::render(0, false));
-    setToolTip(tr("Scyrox V6 - Not connected"));
+    const QString text = error.isEmpty()
+        ? tr("Scyrox V6 - Not connected")
+        : tr("Scyrox V6 - Not connected\n%1").arg(error);
+    m_lastTooltip = text;
+    setToolTip(text);
     m_lastLevel = -1;
     m_lastCharging = false;
     m_lastConnected = false;
@@ -87,6 +92,9 @@ void TrayIcon::updateTooltip(const ScyroxData &data)
 
     QStringList lines;
     lines << QStringLiteral("Scyrox V6");
+
+    if (!data.error.isEmpty())
+        lines << data.error;
 
     if (showPct) {
         const QString status = data.charging ? tr("Charging") : tr("Discharging");

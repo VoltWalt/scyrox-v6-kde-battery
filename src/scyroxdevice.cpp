@@ -184,10 +184,27 @@ bool ScyroxDevice::openDevice(const QString &path)
 
     m_fd = ::open(path.toUtf8().constData(), O_RDWR | O_NONBLOCK);
     if (m_fd < 0) {
-        qWarning() << "Scyrox: cannot open" << path << ":" << strerror(errno);
+        const int err = errno;
+        const QString reason = QString::fromLocal8Bit(strerror(err));
+        if (reason != m_lastOpenError) {
+            qWarning() << "Scyrox: cannot open" << path << ":" << reason;
+            if (err == EACCES)
+                qWarning() << "Scyrox: the hidraw node is root-only."
+                              " Install config/99-scyrox.rules (README,"
+                              " \"Device permissions\"), then replug the device.";
+        }
+        m_lastOpenError = reason;
+        // Qt suppresses qWarning() whenever stderr is not a console, and a
+        // tray app is normally started without one — so the reason also goes
+        // into the published state, where the tooltip can show it.
+        m_data.error = (err == EACCES)
+            ? tr("No permission for %1 — install config/99-scyrox.rules").arg(path)
+            : tr("Cannot open %1 (%2)").arg(path, reason);
         return false;
     }
 
+    m_lastOpenError.clear();
+    m_data.error.clear();
     m_devicePath = path;
     return true;
 }
@@ -202,6 +219,7 @@ void ScyroxDevice::closeDevice()
     m_deviceIdent.clear();
     m_devicePid = 0;
     m_failures = 0;
+    m_data.error.clear();   // the device is simply gone, not broken
 }
 
 QByteArray ScyroxDevice::buildReport(int command)
@@ -455,6 +473,7 @@ void ScyroxDevice::scanDevices()
 
     if (m_devices.isEmpty()) {
         m_data.mode.clear();
+        m_data.error.clear();
     } else {
         // Keep pid/mode in sync for an interface that stayed open the whole
         // time (a cable can be plugged in beside a dongle that never drops).
