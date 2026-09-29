@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Scyrox V6 Battery Indicator
+Comment=Lightweight system tray battery monitor for Scyrox V6 mouse
+Exec=scyrox-v6
+Icon=battery
+Terminal=false
+Categories=Utility;System;
+X-KDE-StartupNotify=false
