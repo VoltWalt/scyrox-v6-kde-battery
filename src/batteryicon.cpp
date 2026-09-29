@@ -1,7 +1,7 @@
 #include "batteryicon.h"
 #include <QPainter>
 
-QCache<int, QPixmap> BatteryIcon::cache(10);
+QCache<int, QPixmap> BatteryIcon::cache(BatteryIcon::MAX_CACHE_SIZE);
 
 QPixmap *BatteryIcon::getCached(int size)
 {

@@ -21,8 +21,10 @@ private slots:
     void onQuit();
 
 private:
+    void resetPresentation();
     void updateTooltip(const ScyroxData &data);
     void updateIcon(const ScyroxData &data);
+    void checkNotifications(const ScyroxData &data);
     QString formatVoltage(int mv) const;
 
     ScyroxDevice *m_device;
@@ -34,4 +36,9 @@ private:
     int m_lastLevel = -1;
     bool m_lastCharging = false;
     bool m_lastConnected = false;
+    QString m_lastTooltip;   // avoid re-sending an identical tooltip
+
+    // Notification tracking
+    bool m_lowNotified = false;
+    bool m_criticalNotified = false;
 };

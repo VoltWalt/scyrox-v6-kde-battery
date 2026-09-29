@@ -8,10 +8,11 @@ Lightweight system tray battery indicator for the Scyrox V6 wireless mouse on KD
 - Color-coded system tray icon (green/yellow/red)
 - Charging indicator with lightning bolt
 - Voltage-to-percentage conversion using Scyrox S-Center curve
-- State persistence across sessions
-- Low battery notifications
-- Settings dialog with configurable thresholds
-- Ultra-lightweight: ~2 MB RAM, 0% CPU when idle
+- State persistence across sessions (written only when the reading changes)
+- Low battery notifications with configurable thresholds
+- Settings dialog for tooltip content and notification thresholds
+- Idle cost measured on CachyOS / Qt 6.11: **0 % CPU**, ~52 MB RSS,
+  4 threads, one file descriptor for the mouse, one small state file
 
 ## Requirements
 

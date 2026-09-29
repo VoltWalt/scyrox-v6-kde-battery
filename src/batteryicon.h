@@ -14,4 +14,5 @@ private:
     static QColor colorForLevel(int percentage);
     static QPixmap *getCached(int size);
     static QCache<int, QPixmap> cache;
+    static constexpr int MAX_CACHE_SIZE = 20;
 };
