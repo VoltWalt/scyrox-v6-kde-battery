@@ -532,7 +532,14 @@ void ScyroxDevice::pollBattery()
             return;
         }
         if (link == Link::Offline) {
-            setPollInterval(preferredPollInterval());
+            // The dongle answers DeviceOnline from its own state — the sleeping
+            // mouse never hears it, so re-checking every few seconds costs the
+            // mouse nothing (pure USB traffic to a mains-powered dongle) while
+            // shrinking the window in which the only thing we can show is the
+            // cached reading. The previous full-cycle wait meant the mouse had
+            // almost always fallen asleep before we looked, so the tray sat on
+            // stale numbers indefinitely.
+            setPollInterval(OFFLINE_RETRY_MS);
             if (loadState(m_data.address)) {
                 m_data.connected = true;
                 m_data.cached = true;
@@ -649,8 +656,14 @@ bool ScyroxDevice::loadState(const QString &address)
 
     m_data.rawLevel = obj[QLatin1String("rawLevel")].toInt();
     m_data.displayLevel = obj[QLatin1String("displayLevel")].toInt();
-    m_data.charging = obj[QLatin1String("charging")].toBool();
     m_data.voltageMv = obj[QLatin1String("voltageMv")].toInt();
+    // The level drifts over hours, so reusing it is fine. Charging is not
+    // reusable: it flips the instant a cable is plugged or pulled, and we only
+    // reach this path because the mouse is asleep and cannot tell us. Keeping
+    // the saved flag made the tray keep claiming "Charging" long after the
+    // mouse came off charge — the caller therefore sees charging = false for
+    // any cached reading and must not present it as a fact.
+    m_data.charging = false;
     m_data.mode = savedMode;
     m_data.address = savedAddress;
     m_data.connected = true;

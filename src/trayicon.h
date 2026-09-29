@@ -6,6 +6,8 @@
 #include <QSettings>
 #include "scyroxdevice.h"
 
+class QTimer;
+
 class TrayIcon : public QSystemTrayIcon
 {
     Q_OBJECT
@@ -26,12 +28,14 @@ private:
     void updateIcon(const ScyroxData &data);
     void checkNotifications(const ScyroxData &data);
     QString formatVoltage(int mv) const;
+    QString formatAge(qint64 timestamp) const;
 
     ScyroxDevice *m_device;
     QMenu *m_menu;
     QAction *m_settingsAction;
     QAction *m_quitAction;
     QSettings m_settings;
+    QTimer *m_ageTimer = nullptr;   // keeps the "last read N ago" line honest
 
     int m_lastLevel = -1;
     bool m_lastCharging = false;

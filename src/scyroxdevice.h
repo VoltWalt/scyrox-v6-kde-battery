@@ -136,6 +136,7 @@ private:
     static constexpr int POLL_INTERVAL_WIRED_MS = 15000;     // cable: free, show charge progress
     static constexpr int SCAN_INTERVAL_MS = 5000;            // cheap sysfs plug-event scan
     static constexpr int RETRY_INTERVAL_MS = 5000;           // come back fast after a failed query
+    static constexpr int OFFLINE_RETRY_MS = 10000;           // mouse asleep: ask the dongle again soon
     static constexpr int SMOOTH_STEP_SECONDS = 10;           // at most 1% per 10 seconds
     static constexpr int STATE_RESET_SECONDS = 1800;         // cached state older than 30 min is dropped
     static constexpr int MAX_FAILURES = 3;

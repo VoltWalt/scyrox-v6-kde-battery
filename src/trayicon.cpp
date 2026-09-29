@@ -3,6 +3,8 @@
 #include "settingsdialog.h"
 #include <QApplication>
 #include <QStringList>
+#include <QDateTime>
+#include <QTimer>
 
 TrayIcon::TrayIcon(ScyroxDevice *device, QObject *parent)
     : QSystemTrayIcon(parent)
@@ -25,6 +27,19 @@ TrayIcon::TrayIcon(ScyroxDevice *device, QObject *parent)
     // ScyroxDevice emits before this object exists, so seed the tray from the
     // state it already holds instead of waiting for the next change.
     onDataChanged(m_device->data());
+
+    // A cached reading is only re-published when its numbers move, but the
+    // "last read N ago" line has to keep counting up. Cheap: one string
+    // compare every 30 s, and updateTooltip() skips setToolTip() unless the
+    // text actually changed.
+    m_ageTimer = new QTimer(this);
+    m_ageTimer->setInterval(30000);
+    connect(m_ageTimer, &QTimer::timeout, this, [this]() {
+        const ScyroxData d = m_device->data();
+        if (d.connected)
+            updateTooltip(d);
+    });
+    m_ageTimer->start();
 
     show();
 }
@@ -75,13 +90,16 @@ void TrayIcon::resetPresentation(const QString &error)
 
 void TrayIcon::updateIcon(const ScyroxData &data)
 {
-    if (data.displayLevel == m_lastLevel && data.charging == m_lastCharging
-        && m_lastConnected)
+    // The lightning bolt would be drawn from a cached flag describing a cable
+    // that may have been unplugged since, so it belongs to live readings only.
+    const bool charging = data.charging && !data.cached;
+
+    if (data.displayLevel == m_lastLevel && charging == m_lastCharging && m_lastConnected)
         return;
 
-    setIcon(BatteryIcon::render(data.displayLevel, data.charging));
+    setIcon(BatteryIcon::render(data.displayLevel, charging));
     m_lastLevel = data.displayLevel;
-    m_lastCharging = data.charging;
+    m_lastCharging = charging;
     m_lastConnected = true;
 }
 
@@ -97,8 +115,16 @@ void TrayIcon::updateTooltip(const ScyroxData &data)
         lines << data.error;
 
     if (showPct) {
-        const QString status = data.charging ? tr("Charging") : tr("Discharging");
-        lines << QStringLiteral("%1: %2%").arg(status).arg(data.displayLevel);
+        if (data.cached) {
+            // Deliberately no "Charging"/"Discharging" word: that flag records
+            // the moment of the last read, and the cable may have been pulled
+            // since. Asserting it is what made the tray keep claiming the mouse
+            // was charging long after it stopped.
+            lines << QStringLiteral("%1%").arg(data.displayLevel);
+        } else {
+            const QString status = data.charging ? tr("Charging") : tr("Discharging");
+            lines << QStringLiteral("%1: %2%").arg(status).arg(data.displayLevel);
+        }
     }
 
     if (detailed) {
@@ -106,9 +132,12 @@ void TrayIcon::updateTooltip(const ScyroxData &data)
         const QString mode = (data.mode == QLatin1String("wired")) ? tr("Wired")
                                                                    : tr("Wireless");
         lines << QStringLiteral("%1: %2").arg(tr("Mode"), mode);
-        if (data.cached)
-            lines << tr("(cached)");
     }
+
+    // Shown whenever the numbers are cached, regardless of the detail setting,
+    // because it is the reason they may not be current.
+    if (data.cached)
+        lines << tr("Last read %1 ago").arg(formatAge(data.lastUpdate));
 
     const QString text = lines.join(QLatin1Char('\n'));
     if (text == m_lastTooltip)
@@ -160,6 +189,23 @@ QString TrayIcon::formatVoltage(int mv) const
     if (mv <= 0)
         return tr("Voltage: —");
     return tr("Voltage: %1 mV").arg(mv);
+}
+
+QString TrayIcon::formatAge(qint64 timestamp) const
+{
+    if (timestamp <= 0)
+        return tr("an unknown time");
+
+    const qint64 seconds = QDateTime::currentSecsSinceEpoch() - timestamp;
+    if (seconds < 0)
+        return tr("just now");
+    if (seconds < 60)
+        return tr("less than a minute");
+    if (seconds < 3600)
+        return tr("%1 min").arg(seconds / 60);
+    if (seconds < 86400)
+        return tr("%1 h %2 min").arg(seconds / 3600).arg((seconds % 3600) / 60);
+    return tr("%1 d %2 h").arg(seconds / 86400).arg((seconds % 86400) / 3600);
 }
 
 void TrayIcon::onSettings()
