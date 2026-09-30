@@ -52,6 +52,7 @@ signals:
 private slots:
     void pollBattery();
     void scanDevices();
+    void scanTick();              // timer slot: scan, then query an interface that just appeared
 
 private:
     struct DeviceInfo {

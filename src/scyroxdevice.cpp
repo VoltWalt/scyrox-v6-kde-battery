@@ -60,7 +60,7 @@ ScyroxDevice::ScyroxDevice(QObject *parent)
     , m_scanTimer(new QTimer(this))
 {
     m_scanTimer->setInterval(SCAN_INTERVAL_MS);
-    connect(m_scanTimer, &QTimer::timeout, this, &ScyroxDevice::scanDevices);
+    connect(m_scanTimer, &QTimer::timeout, this, &ScyroxDevice::scanTick);
 
     // P0: without this connection pollBattery() is only ever called once, from
     // the constructor, and the displayed level never changes again.
@@ -490,6 +490,20 @@ void ScyroxDevice::scanDevices()
     publish();
 }
 
+void ScyroxDevice::scanTick()
+{
+    const bool hadInterface = (m_fd >= 0);
+    scanDevices();
+
+    // The 5 s scan sees a replugged interface long before the poll timer comes
+    // round, and nothing else asks the fresh device for a reading — so the tray
+    // sat on "Not connected" for up to a full poll cycle (60 s on the dongle)
+    // after the mouse was plugged in or re-enumerated. pollBattery() only
+    // rescans while no interface is open, so this cannot recurse.
+    if (!hadInterface && m_fd >= 0)
+        pollBattery();
+}
+
 void ScyroxDevice::onPollFailure()
 {
     ++m_failures;
@@ -540,10 +554,16 @@ void ScyroxDevice::pollBattery()
             // almost always fallen asleep before we looked, so the tray sat on
             // stale numbers indefinitely.
             setPollInterval(OFFLINE_RETRY_MS);
-            if (loadState(m_data.address)) {
+            if (loadState(m_data.address))
                 m_data.connected = true;
+            // Offline means there is no live source at all, so whatever is on
+            // screen is a snapshot by definition — including the case where
+            // loadState() had to be skipped because the file expired while the
+            // last live reading is still in memory. Leaving cached at false
+            // there presented an hour-old value with no age line and with the
+            // charging state restored as fact.
+            if (m_data.connected)
                 m_data.cached = true;
-            }
             publish();
             return;
         }
